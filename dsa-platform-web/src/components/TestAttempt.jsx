@@ -200,12 +200,31 @@ function TestAttempt({ test, onBack }) {
   const currentQuestion = questions[currentQuestionIndex];
   const currentSubmission = currentQuestion ? submissionsByQuestion[currentQuestion.id] : null;
 
+  const formatLocalDateTime = (isoString) => {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return isoString;
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const replaceUtcWithLocal = (message) => {
+    if (!message || typeof message !== 'string') return message;
+    const isoUtcRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g;
+    return message.replace(isoUtcRegex, (m) => formatLocalDateTime(m));
+  };
+
   const extractErrorMessage = (err) => {
     if (Array.isArray(err?.response?.data?.detail))
-      return err.response.data.detail.map(e => `${e.loc?.join('.')} — ${e.msg}`).join('\n');
-    if (typeof err?.response?.data?.detail === 'string') return err.response.data.detail;
-    if (typeof err?.response?.data === 'string') return err.response.data;
-    return err?.message || 'An unknown error occurred';
+      return replaceUtcWithLocal(err.response.data.detail.map(e => `${e.loc?.join('.')} ? ${e.msg}`).join('\n'));
+    if (typeof err?.response?.data?.detail === 'string') return replaceUtcWithLocal(err.response.data.detail);
+    if (typeof err?.response?.data === 'string') return replaceUtcWithLocal(err.response.data);
+    return replaceUtcWithLocal(err?.message || 'An unknown error occurred');
   };
 
   const triggerForfeit = async (count) => {
@@ -503,7 +522,10 @@ function TestAttempt({ test, onBack }) {
       <div style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px', textAlign: 'center', maxWidth: '440px' }}>
         <AlertCircle size={48} color="#f87171" style={{ margin: '0 auto 16px', display: 'block' }} />
         <h2 style={{ color: '#e5e7eb', fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Failed to Load Test</h2>
-        <p style={{ color: 'rgba(226,232,240,0.7)', fontSize: '14px', marginBottom: '24px' }}>{loadError}</p>
+        <p style={{ color: 'rgba(226,232,240,0.7)', fontSize: '14px', marginBottom: '10px' }}>{loadError}</p>
+        <div style={{ color: 'rgba(148,163,184,0.85)', fontSize: '12px', marginBottom: '24px' }}>
+          {`Time zone: ${Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Kolkata' ? 'IST' : 'Local device time'}`}
+        </div>
         <button onClick={onBack} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>Go Back</button>
       </div>
     </div>
